@@ -1,0 +1,4 @@
+#!/bin/bash
+
+export OMP_SCHEDULE="guided"
+./prog 15000 0

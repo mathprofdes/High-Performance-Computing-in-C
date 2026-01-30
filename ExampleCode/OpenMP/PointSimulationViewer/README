@@ -1,0 +1,10 @@
+This program requires third party software that is not included with the standard gcc distribution. 
+
+Before compiling this project make sure the following is installed on your system:
+
+- GLEW development package.
+- SFML development package.
+- GLM: development package.
+
+g++ *.cpp *.c -lGL -lGLU -lGLEW -lsfml-window -lsfml-graphics -lsfml-system -o PointSimulationViewer
+

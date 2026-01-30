@@ -1,0 +1,93 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <mpi.h>
+
+using namespace std;
+
+struct Data {
+	char c;
+	double x[2];
+	int i;
+};
+
+int main(int argc, char **argv) {
+	int commsz, rank;
+	srand(time(0));
+
+	MPI_Init(NULL, NULL);
+	MPI_Comm_size(MPI_COMM_WORLD, &commsz);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	if (commsz < 2) {
+		printf("This program needs at least two processes.\n");
+		return -1;
+	}
+
+	Data obj[10];
+//	Data *obj = new Data[10];
+
+	if (rank == 0) {
+		for (int i = 0; i < 10; i++) {
+			obj[i].c = 'A' + i;
+			obj[i].x[0] = 2.7 + 1.5 * i;
+			obj[i].x[1] = 1.5 + 2.75 * i;
+			obj[i].i = 10 + i;
+		}
+	}
+
+	MPI_Datatype structtype;
+	int structlen = 3;
+	int blocks[structlen];
+	MPI_Datatype types[structlen];
+	MPI_Aint displacements[structlen];
+
+	MPI_Aint baseaddr;
+	MPI_Aint caddr;
+	MPI_Aint xaddr;
+	MPI_Aint iaddr;
+	MPI_Get_address(&obj[0], &baseaddr);
+	MPI_Get_address(&obj[0].c, &caddr);
+	MPI_Get_address(&obj[0].x, &xaddr);
+	MPI_Get_address(&obj[0].i, &iaddr);
+
+	blocks[0] = 1;
+	types[0] = MPI_CHAR;
+	displacements[0] = caddr - baseaddr;
+
+	blocks[1] = 2;
+	types[1] = MPI_DOUBLE;
+	displacements[1] = xaddr - baseaddr;
+
+	blocks[2] = 1;
+	types[2] = MPI_INT;
+	displacements[2] = iaddr - baseaddr;
+
+	MPI_Type_create_struct(structlen, blocks, displacements, types,
+			&structtype);
+	MPI_Type_commit(&structtype);
+
+	if (rank == 0) {
+		MPI_Send(obj, 10, structtype, 1, 0, MPI_COMM_WORLD);
+	} else if (rank == 1) {
+		cout << obj[0].c << " " << obj[0].x[0] << " " << obj[0].x[1] << " "
+				<< obj[0].i << endl << endl;
+
+		MPI_Recv(obj, 10, structtype, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		for (int i = 0; i < 10; i++)
+			cout << obj[i].c << " " << obj[i].x[0] << " " << obj[i].x[1] << " "
+					<< obj[i].i << endl;
+	}
+	MPI_Type_free(&structtype);
+
+	if (rank == 0)
+		printf("Finished\n");
+
+//	delete[] obj;
+
+	MPI_Finalize();
+
+	return 0;
+}
